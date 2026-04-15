@@ -64,3 +64,7 @@ printf "\n"
 echo "Finished ${PROBLEM_FILE} -> $log_file"
 printf "Total time: %02d:%02d:%02d\n" \
   $((TOTAL/3600)) $(((TOTAL%3600)/60)) $((TOTAL%60))
+echo ""
+echo "To view results in the browser, run:"
+echo "  ./site/serve.sh"
+echo "Then open http://localhost:3264"
