@@ -97,6 +97,15 @@ You can group problems in subdirectories under `data/` and the generated artifac
 PROBLEM_FILE=data/modrep/modrep.md ./tests/run_example.sh
 ```
 
+To attach user-provided references to a problem, create a sibling reference directory with the same stem:
+
+```text
+agents/generation/data/modrep/modrep.refs/
+```
+
+When that directory exists, the generation agent reads its files before using external search.
+Reference files may be markdown, LaTeX, plain text, or PDF, but markdown, LaTeX and plain text is prefered over PDF. Actually, PDFs are converted to extracted text under `.extracted/` before the agent runs.
+
 ## 6. View Results in the Browser
 
 - `agents/generation/site`: Zola site for browsing results in the browser
@@ -140,4 +149,3 @@ Each problem  in `agents/generation/data/your_category`  will be a section in a 
 ```
 
 This pulls the latest version from the [MATbook repository](https://github.com/srliu3264/MATbook).
-

@@ -25,15 +25,19 @@ This is a hard constraint. Only inspect files, directories, inputs, logs, memory
 The input is provided directly in the prompt and will include:
 
 - the markdown filepath of the math problem
+- the reference directory associated with the problem
 
 Before any reasoning:
 
 1. Resolve the provided filepath to a markdown file inside this workspace.
 2. Read that markdown file carefully.
 3. Set `problem_id` to the provided explicit problem id if the prompt includes one; otherwise set it to the problem filepath relative to `data/`, without the trailing `.md`.
-4. Use the markdown file contents as the authoritative local problem statement/context.
+4. If the prompt provides `reference_dir` and that directory exists, read supported reference files inside it before external search.
+5. Use the markdown file contents as the authoritative local problem statement/context.
 
 Do not flatten category directories out of `problem_id`. A problem in `data/algebra/modrep.md` must use `algebra/modrep`, not `modrep`.
+
+Reference directories are problem-specific. For `data/algebra/modrep.md`, the associated reference directory is `data/algebra/modrep.refs/`. Supported direct reference files include `.md`, `.tex`, and `.txt`. PDF references are pre-extracted by the runner into `.txt` files under `reference_dir/.extracted/`; read those extracted text files instead of trying to inspect PDF binaries. These files are user-provided context, not verified facts; cite them in memory records and proof steps when they influence the proof.
 
 
 ## Required Memory Policy
