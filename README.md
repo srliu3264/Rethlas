@@ -16,7 +16,9 @@ The intended deployment order is:
 - `agents/generation`: the proof-generation agent
 - `agents/verification`: the proof-verification agent
 
-
+In particular, 
+- Original problems are put in `agents/generation/data/`, e.g. unclassified problem `agents/generation/data/example.md`, or classfied problem `agents/generation/data/modrep/modrep.md`, `agents/generation/data/example/example1.md`.
+- Zola project to render the results in a static website is in `agents/generation/site/`.
 
 ## 1. Install Codex CLI
 
@@ -89,12 +91,11 @@ source .venv/bin/activate
 PROBLEM_FILE=data/my_problem.md ./tests/run_example.sh
 ```
 
-The filename stem becomes the generation problem id. In this example:
+You can group problems in subdirectories under `data/` and the generated artifacts preserve that structure. For example:
 
-- problem id: `my_problem`
-- memory directory: `agents/generation/memory/my_problem/`
-- draft proof: `agents/generation/results/my_problem/blueprint.md`
-- verified proof: `agents/generation/results/my_problem/blueprint_verified.md`
+```bash
+PROBLEM_FILE=data/modrep/modrep.md ./tests/run_example.sh
+```
 
 ## 6. View Results in the Browser
 
@@ -129,6 +130,8 @@ From `agents/generation/`:
 ```
 
 On first run this automatically clones the [MATbook](https://www.getzola.org/themes/matbook/) theme. Then it syncs all results from `results/` into the site and starts a local server. Open http://localhost:3264 in your browser.
+
+Each problem  in `agents/generation/data/your_category`  will be a section in a chapter called `your_category`, while problems directly in `agents/generation/data` will be under `unclassified` chapter.
 
 ### Update the MATbook Theme
 

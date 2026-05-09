@@ -44,11 +44,27 @@ def _utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def sanitize_problem_id(raw: str) -> str:
+def _sanitize_problem_component(raw: str) -> str:
     cleaned = re.sub(r"\s+", "_", raw.strip())
     cleaned = re.sub(r"[^A-Za-z0-9._-]", "_", cleaned)
     cleaned = re.sub(r"_+", "_", cleaned).strip("._")
-    return cleaned or "problem"
+    return cleaned
+
+
+def sanitize_problem_id(raw: str) -> str:
+    """Return a safe problem id while preserving relative path components."""
+    normalized = raw.strip().replace("\\", "/")
+    parts: List[str] = []
+    for part in normalized.split("/"):
+        stripped = part.strip()
+        if stripped in {"", "."}:
+            continue
+        if stripped == "..":
+            raise ValueError("problem_id must not contain '..' path components")
+        cleaned = _sanitize_problem_component(stripped)
+        if cleaned:
+            parts.append(cleaned)
+    return "/".join(parts) or "problem"
 
 def build_problem_id(source: str, identifier: str) -> str:
     return sanitize_problem_id(f"{source}_{identifier}")
@@ -62,7 +78,12 @@ def _resolve_path(path_str: str) -> Path:
 
 
 def _problem_dir(problem_id: str) -> Path:
-    return MEMORY_ROOT / sanitize_problem_id(problem_id)
+    sanitized_problem_id = sanitize_problem_id(problem_id)
+    problem_dir = (MEMORY_ROOT / sanitized_problem_id).resolve()
+    memory_root = MEMORY_ROOT.resolve()
+    if not problem_dir.is_relative_to(memory_root):
+        raise ValueError("problem_id resolves outside memory root")
+    return problem_dir
 
 
 def _channel_path(problem_id: str, channel: str) -> Path:

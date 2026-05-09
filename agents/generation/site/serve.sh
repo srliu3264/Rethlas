@@ -15,8 +15,9 @@ fi
 sync_content() {
   echo "Syncing results into site/content/ ..."
 
-  # Clean all generated chapters (everything except _index.md in content/)
+  # Clean generated content while preserving the root landing section.
   find "$CONTENT_DIR" -mindepth 1 -maxdepth 1 -type d -exec rm -rf {} +
+  find "$CONTENT_DIR" -mindepth 1 -maxdepth 1 -type f -name '*.md' ! -name '_index.md' -exec rm -f {} +
 
   if [[ ! -d "$RESULTS_DIR" ]]; then
     echo "No results directory found at $RESULTS_DIR"
@@ -24,73 +25,100 @@ sync_content() {
   fi
 
   local page_count=0
-  local -A chapter_seen
-  local chapter_weight=1
+  local -A section_seen
+  local section_weight=1
 
-  while IFS= read -r -d '' md; do
-    local rel="${md#"$RESULTS_DIR"/}"
-    # rel is e.g. "my_problem/blueprint_verified.md"
-    #          or "algebra/prob1/blueprint_verified.md"
+  toml_escape() {
+    local value="$1"
+    value="${value//\\/\\\\}"
+    value="${value//\"/\\\"}"
+    printf '%s' "$value"
+  }
 
-    local stem
-    stem="$(basename "$md" .md)"
+  ensure_section_indexes() {
+    local rel_dir="$1"
+    local partial=""
+    local component
+    IFS='/' read -r -a components <<< "$rel_dir"
 
-    # Split into: first dir component = chapter, rest = flattened page name
-    local chapter="${rel%%/*}"
-    local rest="${rel#*/}"
+    for component in "${components[@]}"; do
+      if [[ -z "$component" ]]; then
+        continue
+      fi
 
-    # Build page filename: flatten any intermediate dirs into the name
-    local page_name
-    if [[ "$rest" == */* ]]; then
-      # Nested: algebra/prob1/blueprint.md → prob1_blueprint
-      page_name="${rest//\//_}"
-      page_name="${page_name%.md}"
+      if [[ -z "$partial" ]]; then
+        partial="$component"
+      else
+        partial="$partial/$component"
+      fi
+
+      local section_dir="$CONTENT_DIR/$partial"
+      if [[ -z "${section_seen[$partial]:-}" ]]; then
+        mkdir -p "$section_dir"
+        local weight="$section_weight"
+        if [[ "$partial" == "unclassified" ]]; then
+          weight=0
+        fi
+        printf '+++\ntitle = "%s"\nsort_by = "slug"\nweight = %d\n+++\n' \
+          "$(toml_escape "$component")" "$weight" > "$section_dir/_index.md"
+        section_seen[$partial]=1
+        if [[ "$partial" != "unclassified" ]]; then
+          section_weight=$((section_weight + 1))
+        fi
+      fi
+    done
+  }
+
+  while IFS= read -r -d '' problem_dir; do
+    local source_md=""
+    if [[ -f "$problem_dir/blueprint_verified.md" ]]; then
+      source_md="$problem_dir/blueprint_verified.md"
+    elif [[ -f "$problem_dir/blueprint.md" ]]; then
+      source_md="$problem_dir/blueprint.md"
     else
-      # Flat: my_problem/blueprint.md → blueprint
-      page_name="$stem"
+      continue
     fi
 
-    # Create chapter _index.md if not yet seen
-    local chapter_dir="$CONTENT_DIR/$chapter"
-    if [[ -z "${chapter_seen[$chapter]:-}" ]]; then
-      mkdir -p "$chapter_dir"
-      printf '+++\ntitle = "%s"\nsort_by = "weight"\nweight = %d\n+++\n' \
-        "$chapter" "$chapter_weight" > "$chapter_dir/_index.md"
-      chapter_seen[$chapter]=1
-      chapter_weight=$((chapter_weight + 1))
-    fi
+    local problem_rel="${problem_dir#"$RESULTS_DIR"/}"
+    # problem_rel is e.g. "my_problem" or "example/example1".
+    # The leaf problem becomes the page; parent directories become sections.
+    # Root-level problems are grouped under the generated unclassified section.
 
-    # Build page title
-    local page_title
-    if [[ "$rest" == */* ]]; then
-      # e.g. "prob1 — blueprint_verified"
-      local mid="${rest%/*}"
-      page_title="${mid//\// — } — ${stem}"
-    else
-      page_title="$stem"
+    local page_name="${problem_rel##*/}"
+    local category_dir="unclassified"
+    if [[ "$problem_rel" == */* ]]; then
+      category_dir="${problem_rel%/*}"
     fi
+    ensure_section_indexes "$category_dir"
 
-    local dest="$chapter_dir/${page_name}.md"
+    local dest
+    dest="$CONTENT_DIR/$category_dir/$page_name.md"
+
     local ts
-    ts="$(date -r "$md" +%Y-%m-%d 2>/dev/null || echo "2026-01-01")"
+    ts="$(date -r "$source_md" +%Y-%m-%d 2>/dev/null || echo "2026-01-01")"
 
     local tmp="$dest.tmp"
-    python3 "$TRANSFORM" "$md" "$tmp"
+    mkdir -p "$(dirname "$dest")"
+    python3 "$TRANSFORM" "$source_md" "$tmp"
 
     {
       printf '+++\ntitle = "%s"\ndate = %s\nweight = %d\n' \
-        "$page_title" "$ts" "$((page_count + 1))"
+        "$(toml_escape "$page_name")" "$ts" "$page_count"
       printf '[extra]\nmath = true\n+++\n\n'
       cat "$tmp"
     } > "$dest"
     rm -f "$tmp"
     page_count=$((page_count + 1))
-  done < <(find "$RESULTS_DIR" -name '*.md' -print0 | sort -z)
+  done < <(find "$RESULTS_DIR" -mindepth 1 -type d -print0 | sort -z)
 
   echo "Done. Synced ${page_count} page(s)."
 }
 
 sync_content
+
+if [[ "${SYNC_ONLY:-0}" == "1" ]]; then
+  exit 0
+fi
 
 echo ""
 echo "Starting zola serve on http://localhost:${PORT} ..."

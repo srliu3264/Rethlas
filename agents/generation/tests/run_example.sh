@@ -6,6 +6,21 @@ PROBLEM_FILE="${PROBLEM_FILE:-data/example.md}"
 MODEL="${MODEL:-gpt-5.4}"
 REASONING_EFFORT="${REASONING_EFFORT:-xhigh}"
 
+if [[ "$PROBLEM_FILE" = /* ]]; then
+  echo "PROBLEM_FILE must be relative to agents/generation: $PROBLEM_FILE" >&2
+  exit 1
+fi
+
+if [[ "$PROBLEM_FILE" == ".." || "$PROBLEM_FILE" == ../* || "$PROBLEM_FILE" == */.. || "$PROBLEM_FILE" == */../* ]]; then
+  echo "PROBLEM_FILE must not contain '..': $PROBLEM_FILE" >&2
+  exit 1
+fi
+
+if [[ "$PROBLEM_FILE" != data/*.md ]]; then
+  echo "PROBLEM_FILE must point to a markdown file under data/: $PROBLEM_FILE" >&2
+  exit 1
+fi
+
 if [[ ! -f "$ROOT_DIR/$PROBLEM_FILE" ]]; then
   echo "Problem file not found: $ROOT_DIR/$PROBLEM_FILE" >&2
   exit 1
@@ -20,7 +35,7 @@ LOG_DIR="${LOG_DIR:-$ROOT_DIR/logs/$problem_rel}"
 mkdir -p "$LOG_DIR"
 
 log_file="$LOG_DIR/${problem_id}.md"
-prompt="Use AGENTS.md exactly to solve the math problem in ${PROBLEM_FILE}."
+prompt="Use AGENTS.md exactly to solve the math problem in ${PROBLEM_FILE}. Use problem_id=${problem_rel}."
 
 CODEX_VERSION="$(codex --version 2>/dev/null || echo 'unknown')"
 
@@ -29,6 +44,7 @@ echo " Codex:    $CODEX_VERSION"
 echo " Model:    $MODEL"
 echo " Effort:   $REASONING_EFFORT"
 echo " Problem:  $PROBLEM_FILE"
+echo " Problem ID: $problem_rel"
 echo " Log:      $log_file"
 echo "========================================"
 echo ""

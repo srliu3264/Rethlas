@@ -28,7 +28,7 @@ Read:
    - the instruction to follow `AGENTS.md`
 4. Tell each sub-agent to tackle the assigned plan under the instructions in `AGENTS.md`, treating that plan as its starting point rather than restarting the search from zero. If new evidence or discoveries justify it, the sub-agent may refine, extend, or locally revise the plan, but it should preserve continuity with the assigned plan instead of discarding it outright.
 5. Tell each sub-agent that it may itself spawn sub-agents recursively if that helps its assigned plan.
-6. Require each sub-agent to write progress, failures, and any successful proof development back into the shared memory using the same filename-derived `problem_id` as the MCP `problem_id`.
+6. Require each sub-agent to write progress, failures, and any successful proof development back into the shared memory using the same data-relative `problem_id` as the MCP `problem_id`.
 7. Wait for all sub-agents to finish, then gather their reports.
 8. If any plan succeeds, assemble the proof draft from that plan.
 9. If all plans fail, hand the collected reports to `$identify-key-failures`.

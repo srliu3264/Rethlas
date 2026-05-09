@@ -9,7 +9,10 @@ Given the markdown filepath of a math problem, read that file and produce a veri
 - working draft: `results/{problem_id}/blueprint.md`
 - verified proof: `results/{problem_id}/blueprint_verified.md`
 
-Here `problem_id` is the markdown filename without the trailing `.md`.
+Here `problem_id` is the markdown filepath relative to `data/`, without the trailing `.md`. It preserves any category directories. For example:
+
+- `data/example.md` has `problem_id=example`
+- `data/algebra/modrep.md` has `problem_id=algebra/modrep`
 
 ## Workspace Boundary
 
@@ -27,8 +30,10 @@ Before any reasoning:
 
 1. Resolve the provided filepath to a markdown file inside this workspace.
 2. Read that markdown file carefully.
-3. Set `problem_id` to the filename stem `{filename}`.
+3. Set `problem_id` to the provided explicit problem id if the prompt includes one; otherwise set it to the problem filepath relative to `data/`, without the trailing `.md`.
 4. Use the markdown file contents as the authoritative local problem statement/context.
+
+Do not flatten category directories out of `problem_id`. A problem in `data/algebra/modrep.md` must use `algebra/modrep`, not `modrep`.
 
 
 ## Required Memory Policy
@@ -39,7 +44,7 @@ Initialize memory before any reasoning:
 
 - call `memory_init(problem_id=problem_id, meta=...)`
 
-For MCP memory tools, use the filename-derived `problem_id`.
+For MCP memory tools, use the same data-relative `problem_id`.
 
 Use append-only channels (except `meta.json`):
 
